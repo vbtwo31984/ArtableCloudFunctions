@@ -21,3 +21,24 @@ exports.createStripeCustomer = functions.firestore.document('users/{userId}').on
         stripeId: customer.id
     });
 });
+
+exports.getEphemeralStripeKey = functions.https.onCall((data, context) => {
+    const customerId = data.customer_id;
+    const apiVersion = data.api_version;
+    const uid = context.auth.uid;
+
+    if(uid === null) {
+        console.log('Illegal access attempt due to unauthenticated user');
+        throw new functions.https.HttpsError('unauthenticated', 'Illegal access attempt.');
+    }
+
+    return stripe.ephemeralKeys.create(
+        {customer: customerId},
+        {stripe_version: apiVersion}
+    ).then((key) => {
+        return key;
+    }).catch((err) => {
+        console.log(err);
+        throw new functions.https.HttpsError('internal', 'Unable to create ephemeral key.');
+    })
+});
